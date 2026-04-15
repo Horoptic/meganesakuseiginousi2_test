@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>スマホクイズシステム</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f0f0f0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.quiz-box {
+  background: white;
+  width: 90%;
+  max-width: 400px;
+  height: 90%;
+  max-height: 711px;
+  padding: 20px;
+  border-radius: 20px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+h2 {
+  text-align: center;
+  font-size: 1.8em;
+}
+
+/* ★署名 */
+.signature {
+  text-align: center;
+  font-size: 0.8em;
+  color: #888;
+  margin-top: -10px;
+  margin-bottom: 10px;
+  letter-spacing: 0.05em;
+}
+
+/* ★終了画面用 */
+.final-signature {
+  text-align: center;
+  font-size: 0.9em;
+  color: #666;
+  margin-top: 15px;
+  letter-spacing: 0.05em;
+}
+
+.notice {
+  text-align: center;
+  font-size: 0.75em;
+  color: #999;
+  margin-top: 10px;
+  line-height: 1.4;
+}
+
+.x-link {
+  text-align: center;
+  margin-top: 10px;
+}
+
+.x-link a {
+  color: #1da1f2;
+  text-decoration: none;
+  font-size: 0.9em;
+}
+
+.x-link a:hover {
+  text-decoration: underline;
+}
+
+/* 進捗バー */
+.progress-container {
+  width: 100%;
+  height: 20px;
+  background: #ddd;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: #4caf50;
+  transition: width 0.3s ease;
+}
+
+#progress-text {
+  text-align: center;
+  font-size: 0.9em;
+  margin-bottom: 10px;
+}
+
+/* オーバーレイ */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.overlay.show {
+  display: flex;
+}
+
+.overlay span {
+  font-size: 200px;
+  font-weight: bold;
+  opacity: 0.85;
+  transform: scale(1.2);
+}
+
+.correct {
+  color: red;
+}
+
+.wrong {
+  color: blue;
+}
+
+#question {
+  font-size: 1.2em;
+  margin-bottom: 20px;
+  text-align: left;
+  flex-shrink: 0;
+}
+
+#answers {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-grow: 1;
+}
+
+button {
+  padding: 15px;
+  font-size: 1.2em;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-align: left;
+  line-height: 1.4;
+}
+
+button:hover:not(:disabled) {
+  background: #e0e0e0;
+}
+
+button:disabled {
+  background: #ccc;
+  cursor: default;
+}
+
+#result {
+  margin-top: 10px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 1.2em;
+}
+
+#correct-answer {
+  text-align: center;
+  font-style: italic;
+  color: green;
+  margin-top: 5px;
+  font-size: 1em;
+}
+
+.next-btn {
+  margin-top: 10px;
+  padding: 15px;
+  font-size: 1.2em;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background: #4caf50;
+  color: white;
+  text-align: center;
+}
+
+.next-btn:hover {
+  background: #45a049;
+}
+</style>
+</head>
+<body>
+
+<div id="overlay" class="overlay">
+  <span id="overlay-symbol"></span>
+</div>
+
+<div class="quiz-box">
+  <h2>眼鏡作製技能士【2級】学科</h2>
+  <div class="signature">by Horoptic</div>
+
+  <div class="progress-container">
+    <div class="progress-bar" id="progress-bar"></div>
+  </div>
+  <div id="progress-text">1 / 50</div>
+
+  <div id="question"></div>
+  <div id="answers"></div>
+  <button class="next-btn" onclick="nextQuestion()">次の問題</button>
+  <div id="result"></div>
+  <div id="correct-answer"></div>
+</div>
+
+<script>
+const quizData = [
+  { type: "4", question: "S+1.50D C-0.75D Ax90°のレンズで屈折補正される眼はどれか。", answers: ["A. 混合性直乱視","B. 混合性倒乱視","C. 遠視性直乱視","D. 遠視性倒乱視"], correct: 3 },
+  { type: "4", question: "眼軸長が同じで、角膜の屈折力が強くなると、眼の屈折状態はどうなるか。", answers: ["A. 変化しない。","B. 近視化する。","C. 遠視化する。","D. 乱視化する。"], correct: 1 },
+  { type: "4", question: "裸眼の状態で調節近点が最も眼から遠いのはどれか。", answers: ["A. 補正値S-2.00D　調節力4.00D","B. 補正値S-3.00D　調節力3.00D","C. 補正値S+2.00D　調節力7.00D","D. 補正値S+4.00D　調節力 10.00D"], correct: 2 },
+  { type: "4", question: "視力0.2のランドルト環の切れ目は視角何分か。", answers: ["A. 1分","B. 2分","C. 5分","D. 10分"], correct: 2 },
+  { type: "4", question: "S+0.50D C-2.00D Ax90°で補正できる眼に対し、クロスシリンダーレンズを使って乱視の有無を調べようと思う。円柱レンズの度数をゼロから始める場合、最初に入れておくべき球面度数で正しいのはどれか。", answers: ["A. S+1.00D","B. S+0.50D","C. S±0.00D","D. S-0.50D"], correct: 3 },
+  { type: "4", question: "誤っているのはどれか。", answers: ["A. 紫外線の波長は可視光より長い。","B. 反射防止コートは光の干渉を利用している。","C. 影となる領域に波動が回り込むことを回折という。","D. ダイヤモンドのカットは全反射を効果的に利用している。"], correct: 0 },
+  { type: "4", question: "コノイドについて誤っているのはどれか。", answers: ["A. 眼の非点収差の様子を表している。","B. 直乱視では前焦線は上下に伸びている。","C. 最小錯乱円は前焦線側にややずれている。","D. 倒乱視では水平の経線方向の光線が先に集光する。"], correct: 1 },
+  { type: "4", question: "符号規約の説明で誤っているのはどれか。", answers: ["A. 曲率半径は曲率中心から頂点までの距離とする。","B. 光は原則として左から右に進むような図を描く。","C. プラス・マイナスの符号の取り扱いを定めたもの。","D. 距離を測るときには右向きおよび上向きをプラスの値とする。"], correct: 0 },
+  { type: "4", question: "フレームの「左右のリムをつなぐ支持構造部品」の名称はどれか。", answers: ["A. ブリッジ","B. 智","C. リムロック","D. 丁番"], correct: 0 },
+  { type: "4", question: "以下に示す金属の中で最も金属アレルギーの要因となりやすい素材として正しいのはどれか。", answers: ["A. 金","B. プラチナ","C. ニッケル","D. チタン"], correct: 2 },
+  { type: "4", question: "眼鏡レンズ素材に望ましい特性について、誤っているのはどれか。", answers: ["A. 歪などなく均質で透明なこと。","B. すべての波長の光線を通過させること。","C. 物理的化学的特性共に経年変化が少なく安定していること。","D. プラスチック眼鏡レンズはプライマー処理をすることで耐衝撃性を向上させている。"], correct: 1 },
+  { type: "4", question: "多焦点レンズについて、誤っているのはどれか。", answers: ["A. 像の跳躍はプリズム効果によって生じる。","B. 近用光学中心がレンズ面にない場合がある。","C. 二つの屈折力を持つもののみを多焦点レンズと言う。","D. 多焦点レンズを使用したのはベンジャミンフランクリンが始まりとされる。"], correct: 2 },
+  { type: "4", question: "肢体不自由であることを理由に免許に条件を付されている方が運転する車にはどのようなマークが表示されているか。", answers: ["A. 蝶々のマーク","B. 車いすのマーク","C. 杖を持った人のマーク","D. 四つ葉のクローバーのマーク"], correct: 3 },
+  { type: "4", question: "カラーレンズの効果が高い趣味やスポーツとして誤っているのはどれか。", answers: ["A. ゴルフ","B. スキー","C. ピアノ","D. 釣り"], correct: 2 },
+  { type: "4", question: "S-3.00D C-1.00D Ax180°を度数転換した場合、正しいのはどれか。", answers: ["A. S-4.00D C+1.00D Ax90°","B. S-4.00D C-1.00D Ax90°","C. S-2.00D C+1.00D Ax90°","D. S-2.00D C-1.00D Ax90°"], correct: 0 },
+  { type: "4", question: "フレームサイズ54□16、玉型最大径56mmのフレームを用いて、下記の眼鏡を作製する場合、最低限必要なレンズ生地径で正しいのはどれか。ただし、レンズ光学中心は生地レンズの幾何学中心にあるものとし、レンズ生地径は加工上2mmの余裕を必要とする。【処方値】PD:66mm、R)S-3.00D L)S-3.00D", answers: ["A. 66mm","B. 64mm","C. 62mm","D. 60mm"], correct: 2 },
+  { type: "4", question: "フレームトレーサーの操作方法について正しいのはどれか。", answers: ["A. フレームそり角が強い場合はそり角が弱くなるようにテンプルを広げながらセットする。","B. メーカー提供の型板をトレースすれば玉形中心間距離が自動的に入力される。","C. キャリブレーション (校正)を適時行うことが望ましい。","D. フレーム玉型の片方だけの測定をしてはいけない。"], correct: 2 },
+  { type: "4", question: "眼鏡作製の軸出し工程について誤っているのはどれか。", answers: ["A. 単焦点レンズを偏心してブロッキングする場合は横ずれに注意する。","B. 軸出し器を操作する場合レンズの前面が斜めになっていても問題はない。","C. サクションカップが軸出し器に斜めにセットされていないかを確認する。","D. レンズメーターで印点する場合レンズ後面が受け台に平行になっていることを確認する。"], correct: 1 },
+  { type: "4", question: "タップの表示 M1.4×0.3 について正しいのはどれか。", answers: ["A. 表示のMはねじの山と谷を表している。","B. タップを1回転すれば1.4mm進む。","C. 0.3 はピッチを意味している。","D. 1.4 はねじの長さである。"], correct: 2 },
+  { type: "4", question: "幼児・学童の解剖学的フィッティングについて、誤っているのはどれか。", answers: ["A. 眼の高さは顔面水平中心線より上方に位置している。","B. 皮脂の分泌量が成人よりも少ない。","C. 顔の縦横比は成人よりも横が広い。","D. 鼻は小さく低く扁平である。"], correct: 0 },
+  { type: "4", question: "美観的フィッティングについて、組み合わせとして正しいのはどれか。①白銀比とは、コピー用紙などにも用いられる比率。約5:7。②装用時前傾角が10°よりも大きいと、柔らかい印象となる。③眼鏡のフロント部の上下幅は、眉から唇までの1/3程度を基準とする。④眼鏡のフロント部の横幅は、眉尻にかかる左右の鉛直線間の幅を基準とする。", answers: ["A. ①②","B. ②③","C. ③④","D. ①④"], correct: 3 },
+  { type: "4", question: "近用単焦点眼鏡での下方回旋角は15°とすると近用フィッティングポイント位置として、正しいのはどれか。", answers: ["A. 遠用ビジュアルポイントより約3.0mm下方。","B. 遠用ビジュアルポイントより約4.5mm下方。","C. 遠用ビジュアルポイントより約5.5mm下方。","D. 遠用ビジュアルポイントより約6.5mm下方。"], correct: 3 },
+  { type: "4", question: "プレフィッティングにおいて、左レンズの頂点間距離が右レンズより広く、また左パッドが強く当たっている。再調整方法として、正しいのはどれか。", answers: ["A. 左のテンプルチップの下曲げ位置を後ろ寄りに修正する。","B. 右のテンプルチップの下曲げ角度を少なくする。","C. 左パッドの当たりを緩く修正する。","D. 右テンプルの開き幅を小さくする。"], correct: 1 },
+  { type: "4", question: "通信販売について、誤っているのはどれか。", answers: ["A. 通信販売のクーリングオフは8日間である。","B. インターネットによる注文も通信販売である。","C. 通信販売では返品特約に従った返品は可能である。","D. 通信販売では原則として返品できない。"], correct: 0 },
+  { type: "4", question: "眼鏡作製技能士について、正しいのはどれか。", answers: ["A. 弱視の幼児に対する視機能改善のための訓練をすることができる。","B. 裸眼視力の測定,最高補正視力の確認をすることができる。","C. 調節麻痺点眼剤を使用した屈折検査をすることができる。","D. 斜視の診断目的の両眼視検査をすることができる。"], correct: 1 },
+  { type: "2", question: "S+1.00D C-0.75D Ax180°で補正される眼は、「混合性乱視」である。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "加齢による透過率の低下、散乱の増大は短波長側で著しい。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "S+1.00Dで補正される遠視眼で調節力が4Dの場合、裸眼での調節近点は眼前20cmである。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "普通自動車免許取得に必要な視力は片眼0.5以上、両眼で0.7以上必要である。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "雲霧法による乱視測定では、後焦線の方向を調べている。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "光は熱放射かルミネセンスで発生する。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "プルキンエ・サンソン像は4つある。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "プラスレンズが偏心していると、コバ側に基底方向があるプリズム作用が生じる。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "NT合金とは、ニッケルとチタンの合金である。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "テンプルの長さはフロントとの境目である合口からモダンの先までを計測する。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "ガラスレンズにおいて屈折率を大きくするとレンズの厚さ及び重量軽減にかなりの効果がある。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "花粉症用眼鏡はドライアイにも活用することが出来る。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "汚れのひどい時は洗濯したレンズ専用眼鏡クロスでしっかり拭きとる。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "趣味によって作業距離は異なるが、用途がピアノの場合は約45cmで合わせることが多い。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "お客様が眼鏡処方箋持参で来店。処方箋発行日から1年経過していたが、処方箋通りで眼鏡を作製した。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "頂点間距離 12mm の位置で作製した遠用眼鏡 S-10.00D の頂点間距離を確認したところ 15mmの位置であった。15mmの位置では補正度数効果は弱くなる。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "メガネットプロによるレンズオーダーにおいて、一番最初に入力するのは注文するレンズメーカー名である。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "溝堀り加工でカーブ指定はできない。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "レンズの歪は見え方にのみ影響する。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "眼鏡は顔の中心に掛けるため、装用者のイメージ構築に大きな影響を与える。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "装用時前傾角が不適切な状態でも、非点収差には影響を受けない。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "力学的フィッティングについて、パッドやテンプルチップなど、皮膚に接する部分の面積を極力小さくすることで快適な装用感を得られる。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "クリングスやパッドの調整では、角膜頂点間距離を狭くしたいときは左右バッドの間隔を広げる。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "50歳の方が眼鏡作製を希望して来店された。この場合、視力の測定をして最高視力が1.2であれば、眼科受診を勧める必要はない。", answers: ["〇","✕"], correct: 1 },
+  { type: "4", question: "補正度数がS-2.50D であった。近視の程度分類ではどれに属するか", answers: ["A. 弱度","B. 中等度","C. 強度","D. 最強度"], correct: 0 },
+  { type: "4", question: "房水を産生するのはどこか", answers: ["A. 水晶体","B. 虹彩","C. 毛様体","D. 硝子体"], correct: 2 },
+  { type: "4", question: "S+2.00Dの眼鏡で正視状態になる眼の裸眼での近点が眼前 67cmであった。この場合のピント合わせ力(調節力) について、正しいのはどれか", answers: ["A. 2.00D","B. 2.50D","C. 3.00D","D. 3.50D"], correct: 3 },
+  { type: "4", question: "距離1.5mでようやく 5m用0.1のランドルト環の切れ目の方向が正しく判断できた。この場合の視力値について、正しいのはどれか", answers: ["A. 0.01","B. 0.03","C. 0.05","D. 0.07"], correct: 1 },
+  { type: "4", question: "正しく雲霧された状態で乱視表を見せたところ、12時～6時から1時～7時までのラインが濃く見えると返答があった。マイナス円柱レンズ軸を何度に合わせたらよいか", answers: ["A. 15°","B. 75°","C. 105°","D. 165°"], correct: 0 },
+  { type: "4", question: "非点収差の説明で正しいのはどれか", answers: ["A. 焦線が形成される。","B. たる型と糸巻き型がある。","C. ほうき星のようなぼけ方になる。","D. 眼球網膜の形状は非点収差に対応している。"], correct: 0 },
+  { type: "4", question: "グルストランドの模型眼において弛緩時の精密模型眼の全眼系の屈折力はどれか", answers: ["A. 24D","B. 59D","C. 65D","D. 70D"], correct: 1 },
+  { type: "4", question: "両眼ともマイナス球面レンズの眼鏡の光学中心間距離が瞳孔間距離よりも広くなっているときのプリズム作用はどれか", answers: ["A. Base In","B. Base Out","C. Base Up","D. Base Down"], correct: 0 },
+  { type: "4", question: "次の文章で説明する眼鏡フレームの部位の名称で正しいものはどれか。「テンプルにつながるフロント両端部分。ヨロイとも呼ばれる。」", answers: ["A. パッド","B. 小口","C. 合口","D. 智"], correct: 3 },
+  { type: "4", question: "以下に示すプラスチックの中で最も可燃性の高い素材はどれか", answers: ["A. アセテート","B. セルロイド","C. ポリカーボネート","D. グリアミド"], correct: 1 },
+  { type: "4", question: "遠近累進屈折力レンズの性能特性について、誤っているのはどれか", answers: ["A. 像のゆれはレンズを装用して視線や頭を左右に動かすことで生じる。","B. 装用時に発生するゆれ・ゆがみの成分にはノーマル歪とスキュー歪がある。","C. 遠見部であれば側方視時も収差はないのでハッキリ見ることが出来る。","D. 不同視補正において使用する場合は近用部での上下プリズムに左右差が生じる。"], correct: 2 },
+  { type: "4", question: "単焦点眼鏡レンズの収差について、像のぼやけに関係しないのはどれか", answers: ["A. コマ収差","B. 歪曲収差","C. 非点収差","D. 球面収差"], correct: 1 },
+  { type: "4", question: "聴覚障がいであることを理由に免許に条件を付されている方が運転する車に表示しているマークに描かれているものはどれか", answers: ["A.（車いす）","B.（四つ葉）","C.（蝶々）","D.（上向きの矢印）"], correct: 2 },
+  { type: "4", question: "累進屈折力レンズで、手元のものにピントが合わないと言われた場合の対応で誤っているのはどれか", answers: ["A. 加入度を強くする。","B. 累進帯の短いレンズにする。","C. 角膜頂点間距離を短めにする。","D. 遠用度数をプラス側に調整する。"], correct: 2 },
+  { type: "4", question: "S+2.00D C-2.00D Ax180°を度数転換した場合、正しいのはどれか", answers: ["A. S-4.00D C+2.00D Ax90°","B. S±0.00D C-2.00D Ax90°","C. S+1.00D C-1.00D Ax180°","D. S±0.00D C+2.00D Ax90°"], correct: 3 },
+  { type: "4", question: "右レンズで 3△ BI 1△ BD を作り出した場合、レンズメータの視野内に映るコロナの位置で正しいのはどれか", answers: ["A. 18° 方向","B. 162° 方向","C. 198° 方向","D. 342° 方向"], correct: 3 },
+  { type: "4", question: "次に掲げる特殊加工について誤っているのはどれか", answers: ["A. プラスレンズで厚さの軽減を行う方法は外径指定のみである。","B. PD合わせにレンズ外径が足りない場合には偏心加工を行う。","C. 縁なしや溝掘り加工でレンズの厚さが薄すぎる時は肉厚指定を行う。","D. 球面レンズのプリズム加工と計算して偏心加工を行うことは光学的には同じ結果になる。"], correct: 0 },
+  { type: "4", question: "次の特殊加工について誤っているのはどれか", answers: ["A. 左右のコバ厚を揃えたいときは肉厚指定を行う。","B. マイナスレンズで肉厚指定をすると中心厚が変わる。","C. プラスレンズで外径指定する目的はコバ厚を軽減するためである。","D. プラスレンズでは外径指定より中心厚を薄くできる注文方法がある。"], correct: 2 },
+  { type: "4", question: "タップに印字してある数値、記号から読み取れないのはどれか", answers: ["A. ねじの長さ","B. ねじの外径","C. ねじの規格","D. ピッチ"], correct: 0 },
+  { type: "4", question: "解剖学的要素に配慮した、フィッティングについて、正しいのはどれか", answers: ["A. パッドは2枚の軟骨で支えるように調整する。","B. 外耳孔の後方下部には,茎状突起が突起している。","C. 耳介部の付け根へはテンプルチップを圧迫し,くい込むように調整する。","D. 小児は鼻根部が低く扁平で顔幅が広く,皮脂の分泌量が少なく,慎重にフィッティングする必要がある。"], correct: 3 },
+  { type: "4", question: "フィッティングの実務について、誤っているのはどれか", answers: ["A. テンプル傾斜角の調整は基本的に智で行う。","B. 左右のパッド幅を広くするとフロント部は上がり,狭くすると下がる。","C. フィッティングの手順は全体から細部へ,すなわち前から後ろへ調整する。","D. プラスチックフレームは丁番の埋め込みが緩んでしまうなど,加熱する場所や時間に注意が必要である。"], correct: 1 },
+  { type: "4", question: "ビジュアルポイントの確認について、誤っているのはどれか", answers: ["A. ビジュアルポイントは,第一眼位の瞳孔中心を基準に測定する。","B. 累進屈折力眼鏡では,二重焦点レンズよりも大きい下方回旋量が必要となる傾向がある。","C. 遠用単焦点眼鏡のフィッティングポイントは,装用時前傾角に合わせて遠用ビジュアルポイントより下方に設定する。","D. 遠用ビジュアルポイントの測定では40cmよりも近くで正対して座り,装用者の眼の高さに合わせて測定する方法で行えば測定誤差が小さくなる。"], correct: 3 },
+  { type: "4", question: "フィッティング全般について、正しいのはどれか", answers: ["A. 眼鏡幅の安定固定を得るためには多様な顧客要望は考慮する必要はない。","B. 累進屈折力レンズの装用時前傾角によって近用部の注視野は影響を受ける。","C. 二重焦点眼鏡では角膜頂点間距離の変化における小玉の視野に影響はでない。","D. フィッティングの総合確認は「持ち上げる」「引いてみる」の2項目で十分である。"], correct: 1 },
+  { type: "4", question: "眼鏡関連法規について、誤っているのはどれか", answers: ["A. 薬機法では眼鏡の販売業は届出も許可も必要ない。","B. 消費者契約法では,消費者が事業者の不当な勧誘によって契約してしまったときはその契約を取り消しに出来る。","C. 特例商取引法ではクーリング・オフなどを認め,事業者による法外な損害賠償請求を制限する等が定められている。","D. 廃棄物処理法では眼鏡レンズ加工でのレンズ切削屑は対象となるが,レンズ切削廃水は「廃棄物」に該当しないので対象とはならない。"], correct: 3 },
+  { type: "4", question: "初めて眼鏡を作製するお客様への対応として、誤っているのはどれか", answers: ["A. 就学時健診で視力低下を指摘された6歳児であったためまずは眼科受診を勧めた。","B. 50歳の方が急に見にくくなったと来店されたため,まずは眼科受診を勧めた。","C. 最高視力が1.0以上あれば眼科受診を勧める必要はない。","D. 内科や眼科に通院中でないか確認した。"], correct: 2 },
+  { type: "2", question: "遠視眼の遠点は無限遠方である。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "Gullstrand の模型眼では眼軸長を24.0mmとしている。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "S-4.00Dで補正した眼鏡とCLでは、眼前40cmを明視するためのピント合わせ量(調節量) は眼鏡の方がより少なくなる。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "視力表の輝度は80~320cd/m²の範囲と定められている。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "±0.50D のクロスシリンダーを赤印（マイナス軸）が真上になるようにセットした。この場合のSC 式はS＋0.50D C－1.00D Ax180°である。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "反射防止コートは光の干渉を利用している。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "球面収差が眼で生じると乱視となる。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "3△のプリズムレンズを装用すると5m先の物体は15cm 移動して見える。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "眼鏡フレームのサイズ表示で、ボクシングシステムは、玉形高さの中間に引いた線を基準線として、その基準線上にある玉形との交点を求め、その2点間距離を「玉形幅」とし、左右それぞれの玉形間距離を「レンズ間距離」としている。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "眼鏡フレームに使われる金属素材であるチタンは、銅に比べて、錆に強いが比重は大きい。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "装用時屈折力とは装用時に得られる屈折力のことを言い、枠入れ後に測定した後面頂点屈折力と同じになる。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "累進レンズのプリズムシニングは、ＢＵプリズム効果によってレンズ形状を薄くする。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "レンズの汚れがひどい時は、中性または酸性洗剤を薄めた液で洗ってからすすぐことを推奨する。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "Albert Mehrabian のコミュニケーション三大要素の中で、影響力が最も大きいのは視覚である。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "聞き取りで、趣味を尋ねる主目的は、その後の測定をスムーズに進めるためである。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "レンズカーブは一般的に屈折率が1.60 素材のもので計算される。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "近方視の際に遠用レンズをはね上げて作製する複式アルバイトフレームでは、重なる前後2枚のレンズの光学中心距離は一致する。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "メガネットプロを使用する場合、2022 年時点において、インターネットブラウザをMicrosoftEdge 以外で設定すると、作動テストがされておらず何らかの不都合が生じる可能性がある。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "手摺り加工でレンズサイズを小さくするためにレンズ外周を削る場合は、外周すべて同じ程度の力の入れ具合で行う。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "溝掘りや縁なしフレームをパターン加工機で加工する場合に適切な偏心型板を作製すれば、軸出し（ブロッキング）時にレンズの偏心は必要無い。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "眼鏡を眼前に光学的、解剖学的、美観的に安定固定することが、フィッティングの目的である。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "視線とレンズ光軸が一致せず傾きが大きくなるとコマ収差が発生する。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "テンプルチップの下曲げは大きな丸みを持たせず、角を付けて位置は明確になるように曲げ下ろす。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "眼鏡の装用位置は、玉形高さの底辺から5 分の4 の位置に瞳孔中心がくるように調整するとバランスが良い。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "眼鏡作製技能士の資格を有していれば、眼科医療機関で眼鏡処方業務に携わることができる。", answers: ["〇","✕"], correct: 1 },
+  { type: "4", question: "調節努力によって良好な視力が得られる遠視を示す名称として正しいのはどれか。", answers: ["A. 随意遠視","B. 絶対遠視","C. 相対遠視","D. 全遠視"], correct: 0 },
+  { type: "4", question: "無調節時において全屈折系の中で、角膜が担っている屈折力の割合について正しいのはどれか。", answers: ["A. 15％","B. 30％","C. 50％","D. 70％"], correct: 3 },
+  { type: "4", question: "1.00Dの遠視眼でピント合わせの力（調節力）が4Dである。裸眼での調節近点で正しいのはどれか。小数点以下は四捨五入している。", answers: ["A. 眼前20cm","B. 眼前25cm","C. 眼前33cm","D. 眼前50cm"], correct: 2 },
+  { type: "4", question: "「5m用視力表」において小数視力0.1のランドルト氏環の切れ目が2mの距離まで近づくと何とか判別できた。この時の視力として正しいのはどれか。", answers: ["A. 0.01","B. 0.02","C. 0.04","D. 0.05"], correct: 2 },
+  { type: "4", question: "屈折測定の結果、S+2.00Dを装用すると網膜上に最小錯乱円が位置している状態になった。C-0.50D Ax90°を加える時、最小錯乱円を網膜上に維持させるためには、球面レンズをどのように交換するべきか。但し調節は介入しないものとする。", answers: ["A. 球面度数をS+2.50Dに換える。","B. 球面度数をS+2.25Dに換える。","C. 球面度数をS+1.75Dに換える。","D. 球面度数をS+1.50Dに換える。"], correct: 1 },
+  { type: "4", question: "屈折率1.7の素材でできたレンズ面の反射率として正しいのはどれか。", answers: ["A. 2.8％","B. 4.0％","C. 5.3％","D. 6.7％"], correct: 3 },
+  { type: "4", question: "角膜の屈折力に最も近いのはどれか。", answers: ["A. 59D","B. 43D","C. 33D","D. 19D"], correct: 1 },
+  { type: "4", question: "遠点が眼前12.5cmにある眼をコンタクトレンズで補正するときのレンズ度数として正しいのはどれか。", answers: ["A. S-6.00D","B. S-7.00D","C. S-8.00D","D. S-9.00D"], correct: 2 },
+  { type: "4", question: "日本国内において、眼鏡フレームの生産が最も多い県として正しいのはどれか。", answers: ["A. 新潟県","B. 福井県","C. 滋賀県","D. 三重県"], correct: 1 },
+  { type: "4", question: "基本的にねじで固定してフロントとテンプルを繋ぐ支持構造部位の名称として正しいのはどれか。", answers: ["A. 智","B. 丁番","C. 合口","D. テンプルチップ"], correct: 1 },
+  { type: "4", question: "二重焦点レンズと比べて累進屈折力レンズの特徴として正しいのはどれか。", answers: ["A. ゆれ,ゆがみが少ない。","B. 中間距離が明視できない場合がある。","C. 遠近ともに広い鮮明な視界が得られる。","D. どこにもピントの合わない領域がある。"], correct: 3 },
+  { type: "4", question: "累進屈折力レンズの累進帯側方部に発生する収差として正しいのはどれか。", answers: ["A. 色収差","B. 球面収差","C. 非点収差","D. 歪曲収差"], correct: 2 },
+  { type: "4", question: "「会釈」を意味するお辞儀の角度として正しいのはどれか。", answers: ["A. 15度","B. 45度","C. 60度","D. 75度"], correct: 0 },
+  { type: "4", question: "原付免許の視力の合格基準として正しいのはどれか。", answers: ["A. 両眼で0.3以上","B. 両眼で0.5以上","C. 両眼で0.7以上","D. 両眼で0.8以上"], correct: 1 },
+  { type: "4", question: "レンズメータに現在用いている基準波長として正しいのはどれか。", answers: ["A. d線","B. e線","C. h線","D. r線"], correct: 1 },
+  { type: "4", question: "トーリックレンズにおいて、レンズメータで読み取った値が1番目+1.50D、2番目-0.50Dであった。さらに2番目にピントがあった状態でコロナの流れている方向と平行にスケールを合わせて角度を確認すると90°であった。この時の度数として正しいのはどれか。", answers: ["A. S+1.50D C-2.00D Ax90°","B. S-2.00D C-0.50D Ax180°","C. S-0.50D C+1.50D Ax90°","D. S+1.50D C-0.50D Ax180°"], correct: 0 },
+  { type: "4", question: "完成眼鏡の検品項目において誤っているのはどれか。", answers: ["A. レンズの大きさが適正であるか歪み計を用いて確認する。","B. フレームの傷やレンズ表面のコート剥がれがないかを外観チェックする。","C. フレームの形状確認やパッドやテンプルなどすべて左右対称に調整を行う。","D. 作製の指示通りに仕上がっているかレンズ度数および乱視軸度の光学チェックを行う。"], correct: 2 },
+  { type: "4", question: "ねじ抜き作業について誤っているのはどれか。", answers: ["A. ねじ抜き作業後は必要に応じてタップによるねじ山の再形成を行う。","B. ねじが抜けにくい時は超音波洗浄器や炎であぶる方法も効果的である。","C. タップ作業はねじ山をはっきり作るためにやや斜め方向に力を入れて行う。","D. ねじが抜けにくい場合ねじ抜き用切り込みドライバーの押す力を強くしてゆっくり回す。"], correct: 2 },
+  { type: "4", question: "解剖学的フィッティングに基づくフレームの選定について誤っているのはどれか。", answers: ["A. 外耳孔の後方下部には圧迫すると痛みの大きい樹状突起がある。","B. 幼児は鼻骨が未発達なのでパッドの位置が下部にある方が適切である。","C. 耳介の高さが低い位置の人にはフロント下部にテンプルがある形状のフレームが適切である。","D. 頭部形状は左右非対称のこともあるのでパッドや智が調整可能なフレームの方が適切と言える。"], correct: 0 },
+  { type: "4", question: "フレームの型直しの手順や方法について正しいのはどれか。", answers: ["A. パッド調整は多少の左右差があっても問題はない。","B. 左右レンズ面のねじれに対してはパッド調整のみで修正可能である。","C. テンプル傾斜角の大きな修正でも傾斜角調整用ヤットコのみで問題なく調整出来る。","D. 歪んだフレームの型直しは先ずブリッジと左右リム接合部の状態確認及びその修正から始める。"], correct: 3 },
+  { type: "4", question: "遠用ビジュアルポイントの確認について誤っているのはどれか。", answers: ["A. 装用時前傾角は関与しない。","B. 装用者の第一眼位で位置を設定する。","C. 瞳孔間距離に合わせ左右均等に設定する。","D. 累進屈折力レンズではフィッティングポイントを合わせる基準となる。"], correct: 2 },
+  { type: "4", question: "プレフィッティングにおいて、左レンズの角膜頂点間距離が右レンズより広く、また右パッドが強く当たっている。再調整方法として、正しいのはどれか。", answers: ["A. 右パッドの当たりを緩く修正する。","B. 左テンプルの開き幅を大きくする。","C. 左のテンプルチップの下曲げ角度を少なくする。","D. 右のテンプルチップの下曲げ位置を前寄りに修正する。"], correct: 1 },
+  { type: "4", question: "眼鏡関連法規について、正しいのはどれか。", answers: ["A. 薬機法では眼鏡の販売業は届出も許可も必要ない。","B. 消費者契約法では契約の締結から10年間を過ぎると時効により取消権が消滅する。","C. 廃棄物処理法では眼鏡レンズ加工でのレンズ切削屑は対象となるが,レンズ切削廃水は「廃棄物」に該当しないので対象とはならない。","D. 特例商取引法のクーリング・オフでは消費者が「契約をやめたい」と思ったとき,申し込みまたは契約後,一定期間内は条件付きで契約の解除が出来る。"], correct: 0 },
+  { type: "4", question: "眼鏡処方せんを持参せずに眼鏡作製を希望し来店されたお客様に対する対応として、誤っているのはどれか。", answers: ["A. 8歳の小学生だったので眼鏡作製せずに眼科受診を勧めた。","B. 最高視力が0.7であったので眼鏡作製せずに眼科受診を勧めた。","C. 初めての近用眼鏡作製の希望であったので眼鏡作製のうえ,眼科受診を勧めた。","D. 翼状片による乱視であったのでまず手術をする必要があると告げ,眼科受診を勧めた。"], correct: 3 },
+  { type: "2", question: "「正視」とは、調節をして遠方にピントが合う屈折状態のことをいう。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "水晶体の屈折率は1.336である。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "S+2.00Dの遠視眼でピント合わせの力（調節力）が3.0Dの場合の明視域は眼後2m～眼前1mである。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "小数視力1.0をlogMARで表すと0となる。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "RV=1.0の意味は右眼の補正視力が1.0であることを意味している。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "可視光の分光視感効率には個人差がある。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "角膜中心部の厚さは周辺部より薄い。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "S-1.00D C-1.00D Ax180°のレンズの45°方向の断面度数は-1.50Dである。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "ボクシングシステムでの玉形中心間距離は、玉形幅とレンズ間距離の和で求められる。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "NT合金は、生活温度において「超弾性」と「形状記憶」の特性を持つニッケルとチタンの合金である。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "非球面設計のレンズでは周辺部の像面が弱度側にかたむきやすい。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "内面累進屈折力レンズは外面累進屈折力レンズより装用時に感じるゆれ、歪みが少ない。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "一般の眼鏡は60℃未満の環境での使用が推奨される。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "店頭に良い商品を取り揃えておけば、接客マナーは気にする必要性はない。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "60歳、近方が現用眼鏡では見づらくなったため来店。現用眼鏡度数は左右同度数でS+1.50D ADD+2.00D。近方が見づらいことが主訴であり、お客様の時間もなかったため S+1.50D ADD+2.50D と加入屈折力だけを変更し眼鏡作製を行った。但し、左右の見え方の違いや眼疾患等はないものとする。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "望遠鏡式レンズメータを使用して S-2.00D C-1.00D Ax90°の度数で印点する場合、-2.00Dでコロナが流れて見える方向を90° 方向に設定する。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "レンズメータによる二重焦点レンズの測定において、小玉の付いている側をレンズ受け側に当て、遠用と近用の度数差を加入屈折力とする。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "フレームトレーサーによるレンズ注文は、レンズを全て囲っているフルリムタイプでなければ使用できない。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "フルリムのリムロック部のねじ締めで、ドライバーの使い方は押す力3、回す力7の比率で力を入れるのが基本である。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "平面(度なし) レンズであっても多少のプリズム作用が生じるので、左右同一の Base 方向になるようにレイアウト (軸出し)する。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "プレフィッティングとは、基本調整されたフレームを装用者の頭部に合わせる調整である。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "角膜頂点間距離とは、角膜頂点からレンズ前面頂点までの距離のことである。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "ビッセルスの公式では、鼻の傾斜角度が大きいほど鼻の面に垂直にかかる力は大きくなる。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "眼鏡の装用位置・高さは、玉形高さの底辺から5分の3の位置に瞳孔中心が来るように調整すると美観的なバランスが良い。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "弱視治療中の幼稚園児が「鼻眼鏡になっている」とのことでフレーム調整を希望し来店した場合でも、その都度眼科受診を勧めなければならない。", answers: ["〇","✕"], correct: 1 },
+  { type: "4", question: "最強度近視は何Dを超えるものか。", answers: ["A. S-6.00D","B. S-8.00D","C. S-10.00D","D. S-12.00D"], correct: 2 },
+  { type: "4", question: "角膜は何層構造か。", answers: ["A. 5層","B. 6層","C. 8層","D. 10層"], correct: 0 },
+  { type: "4", question: "S-5.00D の補正が必要な近視眼に、S-3.00D を装用した。ピント合わせ力 (調節力)が2.00D とすると、明視域で正しいのはどれか。", answers: ["A. 眼前40cm~眼前20cm","B. 眼前50cm~眼前 25cm","C. 眼前 67cm~眼前 33cm","D. 眼前100cm~眼前33cm"], correct: 1 },
+  { type: "4", question: "米国で処方された処方せんの視力欄に20/40と記載されていた。小数視力に換算すると、正しいのはどれか。", answers: ["A. 0.2","B. 0.4","C. 0.5","D. 0.8"], correct: 2 },
+  { type: "4", question: "雲霧法で乱視測定を行う場合、乱視測定前の屈折状態で正しいのはどれか。", answers: ["A. 混合性乱視","B. 近視性複性乱視","C. 遠視性単性乱視","D. 遠視性複性乱視"], correct: 1 },
+  { type: "4", question: "＋3.00Dの球面レンズの前方50 cmに物体がある。レンズによってできる像の位置はどれか。", answers: ["A. 前方100 cm","B. 前方20cm","C. 後方20cm","D. 後方100 cm"], correct: 3 },
+  { type: "4", question: "遠点について、誤っているのはどれか。", answers: ["A. 正視の遠点は無限遠方にある。","B. 乱視の遠点は線状に伸びている。","C. 近視の遠点は眼前有限の距離にある。","D. 遠視の遠点は眼後有限の距離にある。"], correct: 1 },
+  { type: "4", question: "S-2.00D C-1.00D Ax180°で補正できる眼に対し、間違えてS-1.00D C-2.00D Ax180°の眼鏡を装用させてしまった。補正のための残余度数はどれか。", answers: ["A. C-1.00D Ax90°","B. C-1.00D Ax180°","C. S+1.00D C-1.00D Ax90°","D. S+1.00D C-1.00D Ax180"], correct: 0 },
+  { type: "4", question: "眼鏡フレームの各部の説明で誤っているのはどれか。", answers: ["A. 智は鎧(よろい)とも呼ばれる。","B. パッド足はクリングスとも呼ばれる。","C. 合口はテンプルチップのテンプル差込口である。","D. 丁番はフロントとテンプルを繋ぐ開閉機能を持つ部分である。"], correct: 2 },
+  { type: "4", question: "ボクシング・システムで表記されていない寸法はどれか。", answers: ["A. 玉形幅","B. 玉形高さ","C. レンズ間距離","D. テンプル長さ"], correct: 1 },
+  { type: "4", question: "眼鏡レンズの収差で誤っているのはどれか。", answers: ["A. コマ収差の影響は考慮していない。","B. 像面湾曲の影響は考慮していない。","C. 非球面レンズは球面収差を減らすことが目的ではない。","D. マイナスレンズでは糸巻き型のディストーションが現れる。"], correct: 3 },
+  { type: "4", question: "光の性質で正しいのはどれか。", answers: ["A. 屈折は屈折率が異なるところで光が折れ曲がる。","B. 反射は光が屈折しない場合に起きる。","C. 干渉は波動が2方向に分かれる。","D. 回折はもとの方向へ光が戻る。"], correct: 0 },
+  { type: "4", question: "接客の話法において、お客様との対話で適切なのはどれか。", answers: ["A. 「了解しました」と返答する。","B. 「なるほど」と相づちを打つ。","C. 「参考になります」と返答する。","D. 「おっしゃる通りです」と賛同する。"], correct: 3 },
+  { type: "4", question: "2025年の国内トレンドカラーは「ホライゾングリーン」となった。トレンドカラーの検討は実シーズンのどのくらい前から始まるか。", answers: ["A. 半年前","B. 1年前","C. 2年前","D. 3年前"], correct: 2 },
+  { type: "4", question: "次の近用眼鏡処方でレンズ加工時にいずれの主経線方向もプラスとなるのはどれか。", answers: ["A. S-2.00D ADD+2.00D","B. S-0.50D C-1.00D Ax90° ADD 2.00D","C. S-2.00D C-2.00D Ax90° ADD+2.00D","D. S-3.50D C-1.00D Ax90° ADD+2.00D"], correct: 1 },
+  { type: "4", question: "近用眼鏡における装用時前傾角として基本となる角度はどれか。", answers: ["A. 5°","B. 10°","C. 15°","D. 20°"], correct: 2 },
+  { type: "4", question: "レンズカーブと度数の関係で誤っているのはどれか。", answers: ["A. レンズカーブは面屈折力の値で示される。","B. レンズカーブは曲率半径から計算される。","C. 屈折率が高いレンズの面屈折力はカーブ計の値より大きい。","D. カーブ計の値はフリントガラスの屈折率が基準になっている。"], correct: 3 },
+  { type: "4", question: "加工時に回転ずれを最も起こしやすいレンズはどれか。", answers: ["A. 強度乱視レンズ","B. 強度プラスレンズ","C. 強度マイナスレンズ","D. プリズム付きレンズ"], correct: 3 },
+  { type: "4", question: "眼鏡用工具の使用方法で正しいのはどれか。", answers: ["A. ドライバーの柄は細いと力が入りやすい。","B. ヤスリは押す時の方が削れる度合いが大きい。","C. ヤットコは横から強く力を入れて握る方が扱いやすくなる。","D. タップの使用時に少しでも引っ掛かる時は力を入れて回転させる。"], correct: 1 },
+  { type: "4", question: "成人の解剖学的特性で正しいのはどれか。", answers: ["A. 頭部形状は左右非対称の場合もある。","B. 眉と目の間隔は左右で一致している。","C. 耳の位置は目の位置よりも上側にある。","D. 耳介付け根は硬いので圧迫しても痛みは感じない。"], correct: 0 },
+  { type: "4", question: "フィッティングで使用するドライバーの説明で誤っているのはどれか。", answers: ["A. ねじを回すときの持ち方は時計技師と似ている。","B. ねじを回すときはドライバーでねじを押しながら回す。","C. ねじを回すときは手で包むようにしてドライバーを持つ。","D. ねじを固く締めたいときは対象物を作業台にあてがうなど固定して行う。"], correct: 0 },
+  { type: "4", question: "左右ともS-5.00Dの度数で右眼が左眼よりも2mm 高い頭部形状に対し、右眼のビジュアルポイントに合わせて左右同じ高さで眼鏡作製したときのプリズム作用はどれか。", answers: ["A. 1.0△左眼 B.D","B. 2.5△左眼 B.D","C. 1.0△左眼 B.U","D. 2.5△左眼 B.U"], correct: 0 },
+  { type: "4", question: "プレフィッティングの合理的な調整箇所の順番で正しいのはどれか。", answers: ["A. パッド ⇒ テンプルチップ ⇒ 左右テンプルの開き角 ⇒ 左右テンプルの傾斜角","B. テンプルチップ⇒ パッド ⇒ 左右テンプルの傾斜角　⇒ 左右テンプルの開き角","C. 左右テンプルの開き角 ⇒ 左右テンプルの傾斜角 ⇒ パッド ⇒ テンプルチップ","D. 左右テンプルの開き角 ⇒ 左右テンプルの傾斜角 ⇒ テンプルチップ ⇒ パッド"], correct: 2 },
+  { type: "4", question: "薬機法に基いた医療機器の分類で最もリスクが高い「高度管理医療機器」に該当するものはどれか。", answers: ["A. 血圧計","B. MRI装置","C. X線診断検査装置","D. 人工心臓ペースメーカー"], correct: 3 },
+  { type: "4", question: "眼鏡処方せんを持参せずに眼鏡作製に来店したお客様への対応で誤っているのはどれか。", answers: ["A. 70歳を過ぎてから視力が低下したという訴えの来店であったため,眼科医療機関の受診を促した。","B. 最近,急に視力低下を自覚しての来店であったため眼鏡作製せずに眼科医療機関の受診を促した。","C. 最近,急に物が二つに見えるための来店であったため,眼鏡作製せずに早急に眼科医療機関の受診を促した。","D. 小学生が学校での眼科健診の結果表を持参しての来店であったため,眼科医療機関受診は勧めずに眼鏡を作製した。"], correct: 3 },
+  { type: "2", question: "屈折補正度数がS+0.50D C-0.50D Ax90°の眼は混合性乱視である。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "屈折補正度数がS-1.00D C-1.00D Ax90°の眼の強主経線方向は180°である。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "50歳で正視の人の平均的な調節近点は、およそ20cmである。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "クロスシリンダーによる乱視測定では反転前後の最小錯乱円の位置の変化を調べている。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "眼鏡使用者が新しいメガネ (遠用) を希望する場合、現用眼鏡での遠用視力の測定は不要である。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "アッベ数の大きい素材ほど色分散が小さい。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "プルキンエ・サンソン像のうち最も明るく見えるのは第1像である。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "プリズムの後方 500cmで光線が 25cm 偏位するプリズムの強さは20△である。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "べっ甲の原料であるタイマイは、ウミガメの一種である。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "イオンプレーティングは非常に強度があり、汚れにも強い。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "累進屈折力レンズの遠見の処方度数値が測定される場所を測定基準点と呼ぶ。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "多焦点レンズに対するスラブ・オフ加工は、レンズの厚みを薄くするために行う。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "望遠鏡式レンズメータの視度調整は遠視眼の場合は不要である。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "ノンバーバル (非言語) コミュニケーションは、音声情報よりも視覚情報が大きな割合を占めている。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "お客様の視環境さえ尋ねれば、レンズ種類の決定は眼鏡作製技能士に任せればよい。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "眼鏡処方せんの略記号で「O.D.」 は右眼を意味する。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "レンズメータに用いる頂点屈折力などを測定する基準波長は約546nmである。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "レンズのベースカーブとはプラスレンズはレンズ前面、マイナスレンズではレンズ後面のカーブを指す。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "加工機のヤゲンカープ設定は作製レンズ前面カーブに合わせることが最良である。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "プリズム付き非球面レンズの注文では偏心加工で間に合うので特注する必要は無い。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "基本調整はプレフィッティングとも言われ、入荷した商品フレームを陳列する前に行う調整である。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "頂点間距離が変わると非点収差が発生する。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "鼻に当たるパッドの面積を大きくすると鼻への圧力が減る。", answers: ["〇","✕"], correct: 0 },
+  { type: "2", question: "美観的なバランスが良い眼鏡の装用位置・高さは、玉形高さの中央より2mm 下方に瞳孔中心を合わせる。", answers: ["〇","✕"], correct: 1 },
+  { type: "2", question: "新たに視覚障害者手帳を取得した人を調査した報告 (2019年)によると、視覚障害の原因疾患の第1位は緑内障である。", answers: ["〇","✕"], correct: 0 },
+];
+
+let current = 0;
+let score = 0;
+let selectedQuiz = [];
+
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
+function generateQuizSet() {
+  const fourChoices = quizData.filter(q => q.type === "4");
+  const twoChoices = quizData.filter(q => q.type === "2");
+
+  shuffleArray(fourChoices);
+  shuffleArray(twoChoices);
+
+  selectedQuiz = [...fourChoices.slice(0,25), ...twoChoices.slice(0,25)];
+}
+
+function updateProgress() {
+  const progress = ((current + 1) / 50) * 100; 
+  document.getElementById("progress-bar").style.width = progress + "%";
+  document.getElementById("progress-text").innerText = `${current + 1} / 50`;
+}
+
+function showOverlay(isCorrect) {
+  const overlay = document.getElementById("overlay");
+  const symbol = document.getElementById("overlay-symbol");
+
+  if (isCorrect) {
+    symbol.innerText = "〇";
+    symbol.className = "correct";
+  } else {
+    symbol.innerText = "✕";
+    symbol.className = "wrong";
+  }
+
+  overlay.classList.add("show");
+}
+
+generateQuizSet();
+
+function loadQuestion() {
+  updateProgress();
+
+  const q = selectedQuiz[current];
+  document.getElementById("question").innerText = q.question;
+
+  const answersDiv = document.getElementById("answers");
+  answersDiv.innerHTML = "";
+
+  q.answers.forEach((ans, index) => {
+    const btn = document.createElement("button");
+    btn.innerText = ans;
+    btn.onclick = () => checkAnswer(index);
+    answersDiv.appendChild(btn);
+  });
+
+  document.getElementById("result").innerText = "";
+  document.getElementById("correct-answer").innerText = "";
+}
+
+function checkAnswer(index) {
+  const q = selectedQuiz[current];
+  const result = document.getElementById("result");
+  const correctAnswerDiv = document.getElementById("correct-answer");
+
+  const buttons = document.querySelectorAll("#answers button");
+  buttons.forEach(btn => btn.disabled = true);
+
+  if (index === q.correct) {
+    result.innerText = "正解！";
+    score++;
+    showOverlay(true);
+  } else {
+    result.innerText = "不正解…";
+    showOverlay(false);
+  }
+
+  correctAnswerDiv.innerText = `正解は：${q.answers[q.correct]}`;
+}
+
+function nextQuestion() {
+  document.getElementById("overlay").classList.remove("show");
+
+  current++;
+  if (current < selectedQuiz.length) {
+    loadQuestion();
+  } else {
+    const percentage = (score / 50 * 100).toFixed(1);
+
+    document.querySelector(".quiz-box").innerHTML =
+      `<h2>お疲れ様でした！</h2>
+
+       <p style="text-align:center;font-size:1.3em;">
+       スコア: ${score} / 50<br>
+       正答率: ${percentage}%
+       </p>
+
+       <div class="final-signature">by Horoptic</div>
+
+       <div class="notice">
+       ※本アプリは個人制作の学習用ツールです。<br>
+       内容の正確性は保証されません。
+       </div>
+
+       <div class="x-link">
+       <a href="https://x.com/horoptic" target="_blank">
+       Xはこちら
+       </a>
+       </div>`;
+  }
+}
+
+loadQuestion();
+</script>
+</body>
+</html>
